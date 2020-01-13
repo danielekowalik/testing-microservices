@@ -1,9 +1,5 @@
 package org.example.service;
 
-public class ExampleService {
-
-    public String getName(int id){
-        return "Name"+id;
-    }
-
+public interface ExampleService {
+    String getName(String id);
 }
