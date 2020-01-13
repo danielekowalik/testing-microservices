@@ -1,5 +1,6 @@
 package org.example.controller;
 
+import org.example.service.ExampleService;
 import org.example.service.ExampleServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,10 +15,10 @@ import java.util.NoSuchElementException;
 @RestController
 public class ExampleController {
 
-    private ExampleServiceImpl exampleService;
+    private ExampleService exampleService;
 
     @Autowired
-    public ExampleController(ExampleServiceImpl exampleService) {
+    public ExampleController(ExampleService exampleService) {
         this.exampleService = exampleService;
     }
 
