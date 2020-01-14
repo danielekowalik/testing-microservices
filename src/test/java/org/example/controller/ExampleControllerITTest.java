@@ -61,5 +61,7 @@ public class ExampleControllerITTest {
     public void getDummy_shouldFailIfServiceFails() throws Exception{
         mockMvc.perform(get("/dummy/567")).andDo(print())
                .andExpect(status().isNotFound());
+
+        verify(exampleService, times(1)).getName("567");
     }
 }
