@@ -1,7 +1,6 @@
 package org.example.controller;
 
 import org.example.service.ExampleService;
-import org.example.service.ExampleServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,9 +29,5 @@ public class ExampleController {
             //typical Spring 5
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Element Not Found", nse);
         }
-
-
     }
-
-
 }
