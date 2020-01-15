@@ -1,0 +1,847 @@
+swagger: '2.0'
+info:
+  title: BAWAG P.S.K. Authorizaton API - Public Endpoints
+  version: v1
+  description: >
+    # **Introduction**
+
+
+    **BAWAG P.S.K. Authorizaton API** is an OAuth 2.0 `authorisation server`
+    issuing `access tokens` and `refresh tokens` to your `client` (=your
+    application)
+     after successfully authenticating the `resource owner` (=your end user) and obtaining authorization.
+     See [oAuth2 Roles](https://tools.ietf.org/html/rfc6749#section-1.1)
+    The `client` MUST provide the [access
+    token](https://tools.ietf.org/html/rfc6749#section-1.4)
+     when it sends protected requests to `resource server` (for instance to `BAWAG P.S.K. API`)
+
+
+    - This console provides an interactive reference for the REST-based API.
+
+
+    - Notational Conventions
+
+      The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+      "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+      document are to be interpreted as described in [RFC 2119](https://tools.ietf.org/html/rfc2119).
+
+
+    ## Getting started
+
+
+    ### Register your Application to use the API
+
+
+    In order to use the API, you have to register your `client` (=your
+    application) at BAWAG P.S.K. providing some
+     information about your company and application as well as the `resource server` Endpoints of the Resources it will have access to.
+     See also [oAuth Client Registration](https://tools.ietf.org/html/rfc6749#section-2)
+    After approval BAWAG P.S.K. will create and assign to your `client` the
+    credentials `client_id`, `client_secret`
+     and `bawagpsk-app-id` as well as the [Authorization Grant](https://tools.ietf.org/html/rfc6749#section-1.3) that MUST be used. You MUST keep securely these credentials.
+    The `client_id` and `client_secret` credentials MUST be used ONLY when your
+    `client` obtains or revokes
+    [access](https://tools.ietf.org/html/rfc6749#section-1.4)
+     resp. [refresh](https://tools.ietf.org/html/rfc6749#section-1.5) tokens from `authorization server`. Never use them in requests to `resource server`.
+    See `POST /token` and `POST /revoke`
+
+
+    The `bawagpsk-app-id` MUST be set in the header `x-bawagpsk-app-id` only
+    when your `client` sends  protected requests to `resource server`. Never use
+    it in requests to `authorization server`.
+
+    See `GET /accounts` in `BAWAG P.S.K. API`
+
+
+    ## OAuth2
+
+    ### oAuth2 Workflow
+
+
+    For details see the [OAuth 2.0 abstract Protocol
+    flow](https://tools.ietf.org/html/rfc6749#section-1.2) and [oAuth2
+    Roles](https://tools.ietf.org/html/rfc6749#section-1.1).
+
+
+    Currently the BAWAG P.S.K internal (=trusted) `clients` CAN implement either
+    the OAuth 2.0 Client Flow of [Resource Owner Password Credentials
+    Grant](https://tools.ietf.org/html/rfc6749#section-4.3)
+     or that of [Client Credentials Grant](https://tools.ietf.org/html/rfc6749#section-4.4).
+    The public `clients` MUST implement the client flow of [Authorization Code
+    Grant](https://tools.ietf.org/html/rfc6749#section-4.1).
+
+      Important Note: The client MUST never store the resource owner's user name and password!
+
+    ### [Resource Owner Password Credentials
+    Grant](https://tools.ietf.org/html/rfc6749#section-4.3) flow.
+
+
+    (A)  The resource owner provides the client with its username and password.
+
+    (B)  The client requests an access token from the authorization server's
+    token endpoint
+     by including the credentials received from the resource owner. When making the request, the client
+     authenticates with the authorization server.
+    (C)  The authorization server authenticates the client and validates the
+    resource owner credentials,
+     and if valid, issues an access token.
+
+    Step (B) Client Request example:
+
+
+    <pre><code>curl -X POST --header "Content-Type:
+    application/x-www-form-urlencoded"
+        --header "authorization: Basic bXlDbGllbnRJZDpteUNsaWVudFNlY3JldA=="
+      --header "User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36..."
+      --header "x-bawagpsk-vendor-id: 8c72e9a7-51f3-48fa-8afc-87cbb6c12c02"
+      --header "x-bawagpsk-language: DE"
+      -d "grant_type=password&username=00000000000000001&password=myPassword"
+      "http://localhost:8080/auth/v1/token"
+    </code></pre>
+
+
+    Step (C) Server Response example:
+
+
+    <pre><code>{
+      "scope": "ebanking push_notification",
+      "expires_in": 7199,
+      "token_type": "Bearer",
+      "access_token": "E862D131DC20B65BD41C2160110182EACF135DBE8BDD9",
+      "refresh_token": "EB9BDE5AECC23C1FAC2FBE279DB38263D5AC8817484BF"
+    }
+
+    </code></pre>
+
+
+    ### Tokens.
+
+
+    * [Access Tokens](https://tools.ietf.org/html/rfc6749#section-1.4) are
+    credentials used to access protected resources -
+     therefore they MUST be send only to `resource server` and never to `authorization server`,
+     unless the access token is sent for revocation to the Endpoint `/revoke`.
+
+    * [Refresh Tokens](https://tools.ietf.org/html/rfc6749#section-1.5) are
+    credentials used to obtain access tokens.
+     Refresh tokens are issued to the client by the `authorization server`
+     and are used to obtain a new access token when the current access token becomes invalid or expires.
+     Unlike access tokens, refresh tokens are intended for use only with authorization servers and are never sent to resource servers.
+
+    Important Notes:
+
+      1. Your client MUST store securely the Refresh and the Access Token.
+      2. Your client MUST NOT obtain a new Access or Refresh Token if the current one is still valid.
+         Otherwise the following Token Limits will be exceeded:
+      2.1. Limit 1 - the number of valid Access Tokens per Refresh Token is limited.
+      2.2. Limit 2 - the number of valid Refresh Tokens per Resource Owner (=End User) is limited.
+
+    ### [Refreshing an Exired `Access Token`
+    flow](https://tools.ietf.org/html/rfc6749#section-1.5)
+
+
+    (A)  The client requests an access token by authenticating with the
+    authorization server and presenting an authorization grant.
+
+    (B)  The authorization server authenticates the client and validates
+     the authorization grant, and if valid, issues an access token and a refresh token.
+    (C)  The client makes a protected resource request to the resource server by
+    presenting the access token.
+
+    (D)  The resource server validates the access token, and if valid, serves
+    the request.
+
+    (E)  Steps (C) and (D) repeat until the access token expires.  If the client
+    knows the access token expired,
+     it skips to step (G);
+     otherwise, it makes another protected resource request.
+    (F)  Since the access token is invalid, the resource server returns an
+    invalid token error.
+
+    (G)  The client requests a new access token by authenticating with the
+    authorization server and presenting the refresh token.
+     The client authentication requirements are based on the client type and on the authorization server policies.
+    (H)  The authorization server authenticates the client and validates the
+    refresh token, and if valid, issues a new access token
+     (and, optionally, a new refresh token).
+
+    Note:  The authorization server MAY issue a new refresh token, in which case
+    the client MUST discard the old refresh token and replace it with the new
+    refresh token.
+
+    The authorization server revokes the old refresh token after issuing a new
+    refresh token.
+
+    When a new refresh token is issued, the refresh token scope is identical to
+    that of the refresh token included by the client in the request.
+
+
+    Step (G): "Refresh Token" Client Request example:
+
+
+    <pre><code>curl -X POST --header "Content-Type:
+    application/x-www-form-urlencoded"
+        --header "authorization: Basic bXlDbGllbnRJZDpteUNsaWVudFNlY3JldA=="
+      --header "User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36..."
+      --header "x-bawagpsk-vendor-id: 8c72e9a7-51f3-48fa-8afc-87cbb6c12c02"
+      --header "x-bawagpsk-language: DE"
+      -d "grant_type=refresh_token&refresh_token=EB9BDE5AECC23C1FAC2FBE279DB38263D5AC8817484BF"
+      "http://localhost:8080/auth/v1/token"
+    </code></pre>
+
+
+    Step (H) "Refresh Token" Server Response example 1:
+
+
+    <pre><code>{
+      "scope": "ebanking push_notification",
+      "expires_in": 7199,
+      "token_type": "Bearer",
+      "access_token": "1128CB1E468BEE2344C047820F67571D836851D72DD4B"
+    }
+
+    </code></pre>
+
+
+    Step (H) "Refresh Token" Server Response example 2 with a new refresh token:
+
+
+    <pre><code>{
+      "scope": "ebanking push_notification",
+      "expires_in": 7199,
+      "token_type": "Bearer",
+      "access_token": "1128CB1E468BEE2344C047820F67571D836851D72DD4B",
+      "refresh_token": "F93BDE5AECC23C1FAC2FBE279DB38263D5AC8817484A2"
+    }
+
+    </code></pre>
+
+
+    ### Scopes
+
+    See [Access Token Scope](https://tools.ietf.org/html/rfc6749#section-3.3)
+
+
+    The BAWAG P.S.K. Resource Server APIs contain Endpoints for different
+    services - such as Account Service,
+     Push Notifications Service, Transfer Services etc. These Endpoints are virtually gathered
+     into `Scopes` (=groups of Resource Endpoints), such like `ebanking`, `push_notification` and so on.
+    As mentioned above - when you register your Client, you provide the
+    information about the Resource Endpoints your Client
+     will have access to - after approval your Client is pre-configured for the requested Scopes.
+
+    When the Client requests authorization, the Authorization Server will
+    process the request using these pre-defined
+     Scopes and will include them in the "scope" response parameter to inform the Client of the scope of the access token issued.
+
+    When the Client requests protected Resources (=Endpoints) and presents the
+    Access Token,
+     the `Resource Server` will process the requests only if the requested Resource is in the Scopes
+     of the Token - otherwise the Server will return Status `401 - Unouthorized`.
+
+    The authorization and token Endpoints of the Authorization Server API allow
+    the `Client` to specify the Scope
+     of the access request using the "scope" request parameter. In turn, the Authorization Server
+     uses the "scope" response parameter to inform the Client of the scope of the access token issued.
+    If the issued access token scope is different from the one requested by the
+    Client, the authorization
+     Server includes the "scope" response parameter to inform the Client of the actual scope granted (=the scope was reduced).
+     Otherwise the authorization Server does not include the "scope" response parameter (=the scope is as requested).
+
+    If the Client omits the "scope" parameter when requesting authorization,
+     the Authorization Server will process the request using the pre-defined
+     scopes the Client has been registered for and will include them in the "scope" response parameter.
+     See Example 2. above.
+
+    ## URLs
+
+
+    - All calls must have the prefix defined in the `BASE URL`
+
+    - Parameters within the URL are `case_sensitive`.
+
+
+    ## Request
+
+
+    * The client MUST make the request to the endpoint by adding the
+       specified parameters using the content type `"application/x-www-form-urlencoded"`
+       format with a character encoding of UTF-8 in the HTTP request entity-body.
+
+    ### HTTP Request Headers
+
+    Note: header names marked with * are required.
+
+    HTTP Request Header            | Example Value        | Description
+
+    ------------------------------ | -------------------- |
+    -------------------------
+
+    User-Agent*                    | Mozilla/5.0 ...      | The client
+    application implementing the network protocol for communication between the
+    client and server. The header should identify the application, including the
+    specific version of the application
+    (http://tools.ietf.org/html/rfc1945#section-10.15)
+
+    Content-Type*                  | application/x-www-form-urlencoded   | the
+    Content-type
+
+    Authorization*                 | Basic bXlDbGllbnRJZDpteUNsaWVudFNlY3JldA==
+    | Contains the OAuth 2.0 "client_id" and "client_secret" as HTTP basic
+    authentication (see [OAuth 2.0: Client
+    Password](http://tools.ietf.org/html/rfc6749#section-2.3.1))
+
+    x-bawagpsk-vendor-id           | 61187a88-7c7c-3579-ba7d-e1f42739f20c |
+    Identifies the End Device (in iOS this is the "vendor-id", in Android - the
+    Device Identifier). **Note**: If the Client sends the End Device Identifier
+    in this Header in Authorization Code or a Refresh Token Requests, then all
+    subsequent Requests both to the Authorization and to the Resource Server
+    MUST also contain the same header. For some applications this header is
+    required. We reccomend you to use this header - this protect your
+    application if the token is compromized.
+
+    x-bawagpsk-language*           | DE                   | Language as
+    ISO-639-1 code. The response will be returned in this language if there is a
+    translation for it (otherwise the response will be in german)
+
+    x-bawagpsk-geospatial-location | 48.173818, 16.388445 | The geographic
+    location of the client device. Longitude and latitude, separated by a comma.
+
+
+
+    ## Response
+
+
+    The API generates UTF-8 encoded JSON output
+
+
+    ### Typical Status Codes
+
+
+    * `200 OK` - The request was successful
+
+    * `201 Created` - The request was successful and a resource was created
+
+    * `204 No Content` - The server successfully processed the request, but is
+    not returning any content
+
+    * `400 Bad Request` - The request could not be understood or was missing
+    required parameters
+
+    * `401 Unauthorized` - User is not authenticated or does not have
+    permissions for the requested operation.
+
+    * `403 Forbidden` - Access denied
+
+    * `404 Not Found` - Resource was not found
+
+    * `405 Method Not Allowed` - Requested method is not supported for the
+    specified resource
+
+    * `409 Conflict` - The request could not be completed due to a conflict with
+    the current state of the resource (possibly caused by concurrent submits)
+
+    * `415 Unsupported Media Type` - ContentType header missing or invalid
+
+    * `500 Internal Server Error` - An unexpected error occurred while
+    processing the request
+
+    * `503 Service Unavailable` - The application is temporary unavailable (e.g.
+    due to scheduled maintenance)
+
+
+    ### Response Messages
+
+
+    - Error, warning, and information response messages (eg. validation errors,
+    backend errors) are provided via response headers `x-bawagpsk-errors`,
+    `x-bawagpsk-warnings`, and `x-bawagpsk-infos` respectively.
+
+    - The content of the headers is in JSON-Format. The HTTP Status code is set
+    accordingly.
+
+
+
+    ### HTTP Response Headers
+
+
+    HTTP Response Header      | Example Value                         |
+    Description
+
+    ------------------------- | ------------------------------------- |
+    ------------------
+
+    Content-Type              | application/json; charset=utf-8       | The API
+    always returns data in JSON format, UTF-8 encoded
+
+    x-bawagpsk-correlation-id | 1014caf6-e1b1-48ea-b097-bb7d09254ab5  | The
+    correlation ID uniquely identifies the request and can be used when
+    debugging problems
+
+    x-bawagpsk-errors         | [{"code": "...", "text": "..."}]      | Error
+    messages (e.g. validation errors, backend errors)
+
+    x-bawagpsk-warnings       | [{"code": "...", "text": "..."}]      | Warning
+    messages
+
+    x-bawagpsk-infos          | [{"code": "...", "text": "..."}]      | Info
+    messages
+
+
+
+    ## Endpoint /token
+
+    use this Endpoint to create or refresh `Access Token`.
+
+
+    ## Endpoint /revoke
+
+    use this Endpoint to revoke a `Refresh Token` or an `Access Token`.
+basePath: /auth/v1
+consumes:
+  - application/json
+produces:
+  - application/json
+definitions:
+  com.bawag.authapi.resources.model.AuthenticationToken:
+    description: >-
+      An OAuth 2.0 [access-token
+      response](http://tools.ietf.org/html/rfc6749#section-5.1), containing an
+      access-token and optional-refresh token.
+    externalDocs:
+      description: 'RFC 6749 (OAuth 2.0), Section 5.1'
+      url: 'http://tools.ietf.org/html/rfc6749#section-5.1'
+    properties:
+      access_token:
+        type: string
+        description: The access-token issued by the authorization server
+        example: >-
+          A4637DC746ED9C3D649D447D45D64E5D21F0F19A9B35D58376DC1810EA9F88EBEFD0C82BD9C1C1F6CA3CEBE38B6DD8DD
+      token_type:
+        type: string
+        description: >-
+          The [access-token
+          type](http://tools.ietf.org/html/rfc6749#section-7.1). Currently
+          always `Bearer`.
+        example: Bearer
+      expires_in:
+        type: integer
+        format: int64
+        description: >-
+          The lifetime in seconds of the access-token. For example, the value
+          '3600' denotes that the access token will expire in one hour from the
+          time the response was generated.
+        example: 3600
+      refresh_token:
+        type: string
+        description: >
+          The refresh-token, which can be used to [obtain new access
+          tokens](http://tools.ietf.org/html/rfc6749#section-6).
+
+
+          It is returned only when obtaining authorization (i.e. grant_type
+          "password").
+
+          When refreshing an access token (i.e. grant_type "refresh_token"),
+          this field is not available.
+        example: >-
+          1A2C7A6A3C9FEFD964B2A6F3E3EDCEB5F7F797EE0B6CC417D0183CF4F05EFD9940337001EA32D5D51AC24ACEB77D2061
+      scope:
+        type: string
+        description: >
+          The [scope of the
+          access-token](http://tools.ietf.org/html/rfc6749#section-3.3), a list
+          of space-delimited, case-sensitive strings.
+
+
+          It is returned if and only if it is different from the requested scope
+          (i.e. no scope has been requested, or the requested scope has been
+          reduced).
+        example: ebanking push_notification
+    required:
+      - access_token
+      - token_type
+      - expires_in
+paths:
+  /token:
+    post:
+      tags:
+        - authentication
+      summary: Obtain or refresh an OAuth 2.0 access token
+      description: "\nUse this Endpoint to obtain an oAuth2 Access Token with the [Authorization Grants](https://tools.ietf.org/html/rfc6749#section-1.3) listed below or to refresh an Access Token.\n\n    Note: the content type is \"application/x-www-form-urlencoded\" - hence the parameter content MUST be encoded accordingly.\n\n## 1. Obtain an access token\n\n* [Obtain Access Token](https://tools.ietf.org/html/rfc6749#section-4.1.3) with [Authorization Code Grant](https://tools.ietf.org/html/rfc6749#section-4.1)\n\n  In the request the 'authorization' header must be set according to the Basic authorization (= Base64 encoded client_id:client_secret), \n  parameter `grant_type` MUST be set to `authorization_code`, parameter `code` MUST be set to the code that was previously issued to the client by the authorization server \n  and parameter `redirect_uri` MUST be set to application's redirect URI that was preconfigured as the application was registered by BAWAG P.S.K.\n\nClient Request example:\n\n<pre><code>curl -X POST --header \"Content-Type: application/x-www-form-urlencoded\"\n    --header \"authorization: Basic bXlDbGllbnRJZDpteUNsaWVudFNlY3JldA==\"\n  --header \"User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36...\"\n  --header \"x-bawagpsk-vendor-id: 8c72e9a7-51f3-48fa-8afc-87cbb6c12c02\" \n  --header \"x-bawagpsk-language: DE\"\n  -d \"grant_type=authorization_code&code=E862D131DC20B65BD41C21601101&redirect_uri=https%3A%2F%2Fclient%2Eexample%2Ecom%2Fcb\"\n  \"http://localhost:8080/auth/v1/token\"\n</code></pre>\n\nServer Response example:\n\n<pre><code>{\n  \"scope\": \"ebanking push_notification\",\n  \"expires_in\": 7199,\n  \"token_type\": \"Bearer\",\n  \"access_token\": \"E862D131DC20B65BD41C2160110182EACF135DBE8BDD9\",\n  \"refresh_token\": \"EB9BDE5AECC23C1FAC2FBE279DB38263D5AC8817484BF\"\n}\n</code></pre>  \n\n* [Obtain Access Token](https://tools.ietf.org/html/rfc6749#section-4.3.2) with [Resource Owner Password Credentials Grant](https://tools.ietf.org/html/rfc6749#section-4.3).\n\n  See the Resource Owner Password Credentials Grant flow in the API introduction above.\n  In the request the 'authorization' header must be set according to the Basic authorization, parameter `grant_type` MUST be set to `password`, parameter `username` MUST be set to username i.e. the ebanking disposer number (or e-Mail etc. in the future),\n  and parameter `password` MUST be set to user's password (i.e. the ebanking disposer PIN).\n\nClient Request example:\n\n<pre><code>curl -X POST --header \"Content-Type: application/x-www-form-urlencoded\"\n    --header \"authorization: Basic bXlDbGllbnRJZDpteUNsaWVudFNlY3JldA==\"\n  --header \"User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36...\"\n  --header \"x-bawagpsk-vendor-id: 8c72e9a7-51f3-48fa-8afc-87cbb6c12c02\" \n  --header \"x-bawagpsk-language: DE\"\n  -d \"grant_type=password&username=00010230050000023&password=myPassword\"\n  \"http://localhost:8080/auth/v1/token\"\n</code></pre>\n\nServer Response example:\n\n<pre><code>{\n  \"scope\": \"ebanking push_notification\",\n  \"expires_in\": 7199,\n  \"token_type\": \"Bearer\",\n  \"access_token\": \"B662D131DC20B65BD41C2160110182EACF135DBE8BDE4\",\n  \"refresh_token\": \"F93BDE5AECC23C1FAC2FBE279DB38263D5AC8817484A2\"\n}\n</code></pre>  \n      \n* [Obtain Access Token](https://tools.ietf.org/html/rfc6749#section-4.4.2) with [Client Credentials Grant](https://tools.ietf.org/html/rfc6749#section-4.4)\n\n  In the request the 'authorization' header must be set according to the Basic authorization, parameter `grant_type` MUST be set to `client_credentials`.  \n  Note: the response contains just an access token with it's attributes. There is no refresh token. \n\nClient Request example:\n\n<pre><code>curl -X POST --header \"Content-Type: application/x-www-form-urlencoded\"\n    --header \"authorization: Basic bXlDbGllbnRJZDpteUNsaWVudFNlY3JldA==\"\n  --header \"User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36...\"\n  --header \"x-bawagpsk-vendor-id: 8c72e9a7-51f3-48fa-8afc-87cbb6c12c02\" \n  --header \"x-bawagpsk-language: DE\"\n  -d \"grant_type=client_credentials\"\n  \"http://localhost:8080/auth/v1/token\"\n</code></pre>\n\nServer Response example:\n\n<pre><code>{\n  \"scope\": \"push_notification\",\n  \"expires_in\": 7199,\n  \"token_type\": \"Bearer\",\n  \"access_token\": \"3A87D131DC20B65BD41C2160110182EACF135DBE8BFF4\"\n}\n</code></pre>  \n      \n\n## 2. [Refresh an Access Token](http://tools.ietf.org/html/rfc6749#section-6)\n\n  If the access token has expired then the client must refresh it using the refresh token. See the Client Flow of [Refresh Tokens](https://tools.ietf.org/html/rfc6749#section-1.5)\n  \n  In the request the 'authorization' header must be set according to the Basic authorization, parameter `grant_type` MUST be set to `refresh_token` and the parameter `refresh_token` MUST contain the refresh token itself.  \n  If valid and authorized, the authorization server issues an access token as described in the [successful response section](https://tools.ietf.org/html/rfc6749#section-1.5).  \n  **Important Note:** The authorization server MAY issue a new refresh token, in which case \n  the client MUST discard the old refresh token and replace it with the\n  new refresh token.  The authorization server revokes the old refresh token after issuing a new refresh token.  \n  When a new refresh token is issued, the refresh token scope is identical to that of the refresh token included by the client in the request.  \n\nClient Request example:\n\n<pre><code>curl -X POST --header \"Content-Type: application/x-www-form-urlencoded\"\n    --header \"authorization: Basic bXlDbGllbnRJZDpteUNsaWVudFNlY3JldA==\"\n\t--header \"User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36...\"\n\t--header \"x-bawagpsk-vendor-id: 8c72e9a7-51f3-48fa-8afc-87cbb6c12c02\" \n\t--header \"x-bawagpsk-language: DE\"\n\t-d \"grant_type=refresh_token&refresh_token=EB9BDE5AECC23C1FAC2FBE279DB38263D5AC8817484BF\"\n\t\"http://localhost:8080/auth/v1/token\"\n</code></pre>\n\nServer Response example:\n\n<pre><code>{\n  \"scope\": \"ebanking push_notification\",\n  \"expires_in\": 7199,\n  \"token_type\": \"Bearer\",\n  \"access_token\": \"1128CB1E468BEE2344C047820F67571D836851D72DD4B\"\n}\n</code></pre>\n"
+      externalDocs:
+        description: OAuth 2.0
+        url: 'http://tools.ietf.org/html/rfc6749'
+      operationId: token
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: authorization
+          description: >
+            Contains the OAuth2 `client-id` (="app-id") and `client-secret`
+            (="app-secret") as HTTP Basic authentication (see [OAuth 2.0: Client
+            Password](http://tools.ietf.org/html/rfc6749#section-2.3.1)).
+          in: header
+          required: true
+          type: string
+          x-mca-example: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
+        - name: user-agent
+          description: >-
+            The header should identify the application, including the specific
+            version of the application
+            (http://tools.ietf.org/html/rfc1945#section-10.15)
+          in: header
+          required: false
+          type: string
+          x-mca-example: Mozilla/5.0 ...
+        - name: x-bawagpsk-vendor-id
+          description: >
+            The unique device identifier of the end device the application is
+            running on (f.i. in iOS the App Vendor ID).
+
+            If this header has been provided in the Request when creating the
+            refresh resp. access token (see the `/token` Endpoint)
+
+            then the same header value MUST be provided also in all subsequent
+            requests to `authorization` or to `resource` server.
+
+            Otherwise the request will be rejected.
+
+            In other words - the same identifier must be sent to refresh the
+            access token, or to access protected resources of BAWAG P.S.K APi.
+
+            **NOTE:** Use this header wherever possible - this improves the
+            security of your applicaton.
+          in: header
+          required: false
+          type: string
+          x-mca-example: 8c72e9a7-51f3-48fa-8afc-87cbb6c12d02
+        - name: x-bawagpsk-language
+          description: >-
+            The ISO-639-1 code of the language. The response will be returned in
+            this language if there is translation for it.
+          in: header
+          required: false
+          type: string
+          x-mca-example: DE
+        - name: grant_type
+          in: formData
+          type: string
+          description: >
+            Value MUST be set to
+
+            1) either `password` - to [obtain an access token with Resource
+            Owner Password Credentials
+            Grant](http://tools.ietf.org/html/rfc6749#section-4.3.2),
+
+            2) or `client_credentials` - to [obtain an access token with Client
+            Credentials
+            Grant](https://tools.ietf.org/html/rfc6749#section-4.4),
+
+            3) or `authorization_code` - to [obtain an access token with
+            Authorization Code
+            Grant](https://tools.ietf.org/html/rfc6749#section-4.1.3),
+
+            4) or `refresh_token` - to [refresh an access
+            token](http://tools.ietf.org/html/rfc6749#section-6)"
+          required: true
+          x-mca-example: password
+        - name: username
+          in: formData
+          type: string
+          description: >-
+            The [username](http://tools.ietf.org/html/rfc6749#section-4.3.2)
+            i.e. the ebanking disposer number that has up to 17 digits with
+            leading zeroes. Required if and only if `grant_type` is `password`.
+            Note: another types like e-mail accounts can be supported in the
+            future.
+          required: false
+          x-mca-example: '00000000000000001'
+        - name: password
+          in: formData
+          type: string
+          description: >-
+            The user
+            [password](http://tools.ietf.org/html/rfc6749#section-4.3.2) (i.e.
+            the ebanking disposer PIN). Required if and only if `grant_type` is
+            `password`.
+          required: false
+          x-mca-example: my-Super-Secret
+        - name: refresh_token
+          in: formData
+          type: string
+          description: >-
+            The [refresh token](http://tools.ietf.org/html/rfc6749#section-6).
+            Required if and only if `grant_type` is `refresh_token`.
+          required: false
+          x-mca-example: a8ab172f-d183-33de-9080-63cb55e89a76
+        - name: scope
+          in: formData
+          type: string
+          description: >
+            The [scope of the access
+            request](http://tools.ietf.org/html/rfc6749#section-4.3.2), a list
+            of space-delimited, case-sensitive strings.
+
+            If missing, the current application's default scopes will be used.
+          required: false
+          x-mca-example: ebanking push_notification
+        - name: code
+          in: formData
+          type: string
+          description: >
+            The [authorization
+            code](https://tools.ietf.org/html/rfc6749#section-1.3.1) issued in
+            the
+
+            [athorization
+            request](https://tools.ietf.org/html/rfc6749#section-4.1.1).
+            Required if and only if `grant_type` is `authorization_code`."
+          required: false
+          x-mca-example: 35e07809-75b1-32dd-9f77-75b9cc0d61d3
+        - name: redirect_uri
+          in: formData
+          type: string
+          description: >-
+            The
+            [redirect_uri](https://tools.ietf.org/html/rfc6749#section-4.1.1).
+            Required if and only if `grant_type` is `authorization_code`.
+          required: false
+          x-mca-example: https%3A%2F%2Fclient%2Eexample%2Ecom%2Fcb
+        - name: client_id
+          in: formData
+          type: string
+          description: >-
+            The [client_id](http://tools.ietf.org/html/rfc6749#section-4.1.3).
+            Required if and only if `grant_type` is `authorization_code`.
+          required: false
+          x-mca-example: my-app-clientID
+      responses:
+        '200':
+          description: >-
+            An OAuth 2.0 [access-token
+            response](http://tools.ietf.org/html/rfc6749#section-5.1).
+          schema:
+            $ref: >-
+              #/definitions/com.bawag.authapi.resources.model.AuthenticationToken
+          headers:
+            x-bawag-correlation-id:
+              description: The correlation ID uniquely identifies the request (required)
+              type: string
+            x-bawagpsk-errors:
+              description: A list of error messages in JSON format (optional)
+              type: string
+            x-bawagpsk-warnings:
+              description: A list of warning messages in JSON format (optional)
+              type: string
+            x-bawagpsk-infos:
+              description: A list of information messages in JSON format (optional)
+              type: string
+        '400':
+          description: >
+            Invalid request or invalid credentials.
+
+            According to the oAuth2 specification the `error response` contains
+            an `error code` and optional `error_description` - see ["5.2. Error
+            Response"](https://tools.ietf.org/html/rfc6749#section-5.2)
+
+            For example:
+
+            HTTP/1.1 400 Bad Request
+
+            Content-Type: application/json
+
+            Cache-Control: no-store
+
+            Pragma: no-cache
+              {"error":"invalid_grant","error_description":"Invalid client-id or client-secret"}
+              {"error":"invalid_grant","error_description":"Invalid authentication token"}
+              {"error":"invalid_grant","error_description":"ERR_LOGIN:Wrong credentials"}
+              {"error":"invalid_grant","error_description":"ERR_USER_DEACTIVATED:User is deactivated"}
+
+            Additional information is available in the http header
+            `x-bawagpsk-errors`:
+
+            code=ERR_USER_DEACTIVATED, text starts with `ERR_USER_DEACTIVATED:`
+            f.i. 'ERR_USER_DEACTIVATED:User is deactivated'. This is when the
+            user is deactivated for all APPs.
+
+            code=ERR_USER_APP_DEACTIVATED, text starts with
+            `ERR_USER_APP_DEACTIVATED:` f.i. 'ERR_USER_APP_DEACTIVATED:User is
+            deactivated`. This is when the user is deactivated only for this
+            particular APP.
+
+            code=ERR_USER_DELETED, text starts with `ERR_USER_DELETED:` f.i.
+            'ERR_USER_DELETED:User has been deleted`
+
+            code=ERR_ANOTHER_APP_INSTANCE_ALREADY_EXISTS, text starts with
+            `ERR_ANOTHER_APP_INSTANCE_ALREADY_EXISTS:` f.i.
+            'ERR_ANOTHER_APP_INSTANCE_ALREADY_EXISTS:Single instance only app
+            already exists for another device`
+
+            code=ERR_INVALID_CREDENTIALS, text starts with `ERR_LOGIN:` f.i.
+            'ERR_LOGIN:Wrong credentials`
+
+            code=ERR_INVALID_CREDENTIALS, text starts with `ERR_LOGIN:` f.i.
+            'ERR_LOGIN:Wrong credentials`
+
+            code=ERR_INVALID_CREDENTIALS, text starts with `ERR_LOGIN:` f.i.
+            'ERR_LOGIN:Wrong credentials`
+
+            code=ERR_INVALID_CREDENTIALS, text starts with `ERR_LOGIN:` f.i.
+            'ERR_LOGIN:Wrong credentials`
+
+            If the grant type is not supported for current app , the `text`
+            starts with `ERR_CLIENT_CREDENTIALS_GRANT_TYPE_NOT_ALLOWED:` or
+            `ERR_PASSWORD_GRANT_TYPE_NOT_ALLOWED:` or
+            `ERR_REFRESH_GRANT_TYPE_NOT_ALLOWED:`.
+          headers:
+            x-bawag-correlation-id:
+              description: The correlation ID uniquely identifies the request (required)
+              type: string
+            x-bawagpsk-errors:
+              description: A list of error messages in JSON format (optional)
+              type: string
+            x-bawagpsk-warnings:
+              description: A list of warning messages in JSON format (optional)
+              type: string
+            x-bawagpsk-infos:
+              description: A list of information messages in JSON format (optional)
+              type: string
+        '401':
+          description: Unauthorized.
+          headers:
+            x-bawag-correlation-id:
+              description: The correlation ID uniquely identifies the request (required)
+              type: string
+            x-bawagpsk-errors:
+              description: A list of error messages in JSON format (optional)
+              type: string
+            x-bawagpsk-warnings:
+              description: A list of warning messages in JSON format (optional)
+              type: string
+            x-bawagpsk-infos:
+              description: A list of information messages in JSON format (optional)
+              type: string
+  /revoke:
+    post:
+      tags:
+        - authentication
+      summary: Revoke the given access resp. refresh token.
+      description: >
+        Revokes the given access resp. refresh token.
+
+        Revocation of a refresh token causes revocation of all related access
+        tokens.
+      externalDocs:
+        description: OAuth 2.0 Token Revocation (Draft 11)
+        url: 'https://tools.ietf.org/html/rfc7009'
+      operationId: revoke
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: authorization
+          description: >
+            Contains the OAuth2 `client-id` (="app-id") and `client-secret`
+            (="app-secret") as HTTP Basic authentication (see [OAuth 2.0: Client
+            Password](http://tools.ietf.org/html/rfc6749#section-2.3.1)).
+          in: header
+          required: true
+          type: string
+          x-mca-example: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
+        - name: user-agent
+          description: >-
+            The header should identify the application, including the specific
+            version of the application
+            (http://tools.ietf.org/html/rfc1945#section-10.15)
+          in: header
+          required: false
+          type: string
+          x-mca-example: Mozilla/5.0 ...
+        - name: x-bawagpsk-vendor-id
+          description: >
+            The unique device identifier of the end device the application is
+            running on (f.i. in iOS the App Vendor ID).
+
+            If this header has been provided in the Request when creating the
+            refresh resp. access token (see the `/token` Endpoint)
+
+            then the same header value MUST be provided also in all subsequent
+            requests to `authorization` or to `resource` server.
+
+            Otherwise the request will be rejected.
+
+            In other words - the same identifier must be sent to refresh the
+            access token, or to access protected resources of BAWAG P.S.K APi.
+
+            **NOTE:** Use this header wherever possible - this improves the
+            security of your applicaton.
+          in: header
+          required: false
+          type: string
+          x-mca-example: 8c72e9a7-51f3-48fa-8afc-87cbb6c12d02
+        - name: x-bawagpsk-language
+          description: >-
+            The ISO-639-1 code of the language. The response will be returned in
+            this language if there is translation for it.
+          in: header
+          required: false
+          type: string
+          x-mca-example: DE
+        - name: token
+          in: formData
+          required: true
+          type: string
+          description: The access resp. refresh token to be revoked
+          minLength: 1
+          maxLength: 40
+          x-mca-example: d16017b4-914f-384a-8dfe-b9ac3a9ce103
+        - name: log_action
+          in: formData
+          required: false
+          type: string
+          description: >
+            Log action code. Set it to
+
+            - 'app_locked_by_time_out' when the token revokation reason is an
+            application time out (the end user was inactive longer than the time
+            out interval)
+
+            - 'app_locked_by_user' when the user explicitly locks the app
+          minLength: 1
+          maxLength: 40
+          x-mca-example: app_locked_by_time_out
+      responses:
+        '200':
+          description: 'Token successfully revoked, or token is invalid'
+          headers:
+            x-bawag-correlation-id:
+              description: The correlation ID uniquely identifies the request (required)
+              type: string
+            x-bawagpsk-errors:
+              description: A list of error messages in JSON format (optional)
+              type: string
+            x-bawagpsk-warnings:
+              description: A list of warning messages in JSON format (optional)
+              type: string
+            x-bawagpsk-infos:
+              description: A list of information messages in JSON format (optional)
+              type: string
+        '400':
+          description: Invalid parameters. See response headers for details.
+          headers:
+            x-bawag-correlation-id:
+              description: The correlation ID uniquely identifies the request (required)
+              type: string
+            x-bawagpsk-errors:
+              description: A list of error messages in JSON format (optional)
+              type: string
+            x-bawagpsk-warnings:
+              description: A list of warning messages in JSON format (optional)
+              type: string
+            x-bawagpsk-infos:
+              description: A list of information messages in JSON format (optional)
+              type: string
+tags:
+  - name: authentication
+    description: OAuth 2.0 endpoints
