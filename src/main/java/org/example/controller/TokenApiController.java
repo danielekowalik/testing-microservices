@@ -1,24 +1,27 @@
 package org.example.controller;
 
-import com.demo.mock.registration.api.TokenApi;
-import com.demo.mock.registration.model.ComBawagAuthapiResourcesModelAuthenticationToken;
+import com.demo.mock.server.registration.api.PetsApi;
+import com.demo.mock.server.registration.model.Pets;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
 
-public class TokenApiController implements TokenApi {
+import javax.validation.Valid;
+
+@RestController
+public class TokenApiController implements PetsApi {
 
     @Override
-    public ResponseEntity<ComBawagAuthapiResourcesModelAuthenticationToken> token(String authorization,
-                                                                                  String grantType,
-                                                                                  String userAgent,
-                                                                                  String xBawagpskVendorId,
-                                                                                  String xBawagpskLanguage,
-                                                                                  String username,
-                                                                                  String password,
-                                                                                  String refreshToken,
-                                                                                  String scope,
-                                                                                  String code,
-                                                                                  String redirectUri,
-                                                                                  String clientId) {
+    public ResponseEntity<Void> createPets() {
+        return null;
+    }
+
+    @Override
+    public ResponseEntity<Pets> listPets(@Valid Integer limit) {
+        return null;
+    }
+
+    @Override
+    public ResponseEntity<Pets> showPetById(String petId) {
         return null;
     }
 }

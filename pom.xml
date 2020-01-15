@@ -95,9 +95,9 @@
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <apiPackage>com.demo.mock.registration.api</apiPackage>
-                            <modelPackage>com.demo.mock.registration.model</modelPackage>
-                            <invokerPackage>com.demo.mock.registration.invoker</invokerPackage>
+                            <apiPackage>com.demo.mock.server.registration.api</apiPackage>
+                            <modelPackage>com.demo.mock.server.registration.model</modelPackage>
+                            <invokerPackage>com.demo.mock.server.registration.invoker</invokerPackage>
                             <inputSpec>${project.basedir}/src/main/resources/api.yaml</inputSpec>
                             <language>spring</language>
                             <!-- library>resttemplate</library -->
@@ -122,7 +122,9 @@
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-
+                            <apiPackage>com.demo.mock.client.registration.api</apiPackage>
+                            <modelPackage>com.demo.mock.client.registration.model</modelPackage>
+                            <invokerPackage>com.demo.mock.client.registration.invoker</invokerPackage>
                             <inputSpec>${project.basedir}/src/main/resources/api.yaml</inputSpec>
                             <language>java</language>
                             <library>resttemplate</library>
