@@ -1,5 +1,6 @@
 package org.example.service;
 
+import com.demo.mock.server.registration.model.Pet;
 import org.springframework.stereotype.Component;
 
 import java.util.NoSuchElementException;
@@ -14,4 +15,8 @@ public class ExampleServiceImpl implements ExampleService{
         return "Name" + id;
     }
 
+    @Override
+    public Pet getPet(String id) {
+        return new Pet();
+    }
 }

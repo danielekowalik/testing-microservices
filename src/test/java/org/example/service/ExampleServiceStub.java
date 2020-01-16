@@ -1,6 +1,8 @@
 package org.example.service;
 
 
+import com.demo.mock.server.registration.model.Pet;
+
 import java.util.NoSuchElementException;
 
 
@@ -12,5 +14,10 @@ public class ExampleServiceStub implements ExampleService{
             throw new NoSuchElementException("BOOM");
         }
         return "Name"+id;
+    }
+
+    @Override
+    public Pet getPet(String id) {
+        return null;
     }
 }

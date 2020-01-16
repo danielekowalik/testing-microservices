@@ -1,5 +1,6 @@
 package org.example.controller;
 
+import com.demo.mock.server.registration.model.Pet;
 import org.example.service.ExampleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,11 @@ public class ExampleController {
     @Autowired
     public ExampleController(ExampleService exampleService) {
         this.exampleService = exampleService;
+    }
+
+    @GetMapping(path = "/pets/{id}", produces = "application/json")
+    public ResponseEntity<Pet> getPet(String id){
+        return ResponseEntity.ok(exampleService.getPet(id));
     }
 
     @GetMapping(path = "/dummy/{id}", produces = "application/json")

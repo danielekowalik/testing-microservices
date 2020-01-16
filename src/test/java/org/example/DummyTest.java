@@ -21,7 +21,6 @@ public class DummyTest {
     @Mock
     List<String> mockedStringList;
 
-
     List<String> spiedStringList = spy(new ArrayList());
 
     @Test

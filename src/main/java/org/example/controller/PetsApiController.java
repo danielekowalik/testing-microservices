@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
 
 @RestController
-public class PetsApiControllerImpl implements PetsApi {
+public class PetsApiController implements PetsApi {
+
+
 
     @Override
     public ResponseEntity<Void> createPets() {
